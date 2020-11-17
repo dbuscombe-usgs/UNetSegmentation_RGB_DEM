@@ -90,7 +90,7 @@ for k in range(2): #create 2 more sets ....
         lab += 1 #avoid averaging over zero
         lab = median(lab[:,:,0]/255.0, disk(3)).astype(np.uint8)
         lab[im[:,:,0]==0]=0
-        lab[lab>11] = 11
+        lab[lab>11] = 11 #if greater than the larger class, it is set to the largest class
 
         print(np.unique(lab.flatten()))
 

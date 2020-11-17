@@ -43,7 +43,13 @@ def get_validation_dataset():
 
 nclasses=12
 TARGET_SIZE = 608
+ims_per_shard = 10
 
+patience = 20
+
+VALIDATION_SPLIT = 0.6
+
+BATCH_SIZE = 6
 #====================================================================
 ## initial 3d model
 
@@ -53,13 +59,6 @@ filepath = os.getcwd()+os.sep+'results/dunes_11class_best_weights_model.h5'
 
 hist_fig = os.getcwd()+os.sep+'results/dunes_11class_model.png'
 
-ims_per_shard = 10
-
-patience = 20
-
-VALIDATION_SPLIT = 0.6
-
-BATCH_SIZE = 6
 
 filenames = sorted(tf.io.gfile.glob(os.getcwd()+os.sep+'tfrecords/threeD/dunes3d*.tfrec'))
 
@@ -140,7 +139,7 @@ print('loss={loss:0.4f}, Mean IOU={iou:0.4f}'.format(loss=scores[0], iou=scores[
 #====================================================================
 ## revised 3d model
 
-VALIDATION_SPLIT = 0.6
+# VALIDATION_SPLIT = 0.6
 BATCH_SIZE = 8
 
 filepath = os.getcwd()+os.sep+'results/dunes_11class_best_weights_3dmodel_revA.h5'
@@ -200,12 +199,105 @@ plot_seg_history_iou(history, hist_fig)
 plt.close('all')
 K.clear_session()
 
+history = model.fit(train_ds, steps_per_epoch=steps_per_epoch, epochs=MAX_EPOCHS,
+                      validation_data=val_ds, validation_steps=validation_steps,
+                      callbacks=callbacks)
+
+plot_seg_history_iou(history, hist_fig)
+
+plt.close('all')
+K.clear_session()
+
 
 scores = model.evaluate(val_ds, steps=validation_steps)
 
 print('loss={loss:0.4f}, Mean IOU={iou:0.4f}'.format(loss=scores[0], iou=scores[1]))
 
 # loss=0., Mean IOU=0.
+
+
+
+
+#====================================================================
+## revised 3d model
+
+BATCH_SIZE = 9
+
+filepath = os.getcwd()+os.sep+'results/dunes_11class_best_weights_3dmodel_revB.h5'
+
+hist_fig = os.getcwd()+os.sep+'results/dunes_11class_3dmodel_revB.png'
+
+
+filenames = sorted(tf.io.gfile.glob(os.getcwd()+os.sep+'tfrecords/threeD/dunes3d*.tfrec'))
+
+nb_images = ims_per_shard * len(filenames)
+print(nb_images)
+
+split = int(len(filenames) * VALIDATION_SPLIT)
+
+training_filenames = filenames[split:]
+validation_filenames = filenames[:split]
+
+validation_steps = int(nb_images // len(filenames) * len(validation_filenames)) // BATCH_SIZE
+steps_per_epoch = int(nb_images // len(filenames) * len(training_filenames)) // BATCH_SIZE
+
+
+train_ds = get_training_dataset()
+
+val_ds = get_validation_dataset()
+K.clear_session()
+
+
+## model building and training
+model = res_unet((TARGET_SIZE, TARGET_SIZE, 3), BATCH_SIZE, 'multiclass', nclasses)
+# model.compile(optimizer = 'adam', loss = tf.keras.losses.CategoricalHinge(), metrics = [mean_iou, dice_coef])
+model.compile(optimizer = 'adam', loss = 'categorical_crossentropy', metrics = [mean_iou, dice_coef])
+
+earlystop = EarlyStopping(monitor="val_loss",
+                              mode="min", patience=patience)
+
+model_checkpoint = ModelCheckpoint(filepath, monitor='val_loss',
+                                verbose=0, save_best_only=True, mode='min',
+                                save_weights_only = True)
+
+lr_callback = tf.keras.callbacks.LearningRateScheduler(lambda epoch: lrfn(epoch), verbose=True)
+
+callbacks = [model_checkpoint, earlystop, lr_callback]
+
+K.clear_session()
+
+#warm-up
+model.fit(train_ds, steps_per_epoch=steps_per_epoch, epochs=MAX_EPOCHS,
+                      validation_data=val_ds, validation_steps=validation_steps,
+                      callbacks=callbacks)
+
+history = model.fit(train_ds, steps_per_epoch=steps_per_epoch, epochs=MAX_EPOCHS,
+                      validation_data=val_ds, validation_steps=validation_steps,
+                      callbacks=callbacks)
+
+plot_seg_history_iou(history, hist_fig)
+
+plt.close('all')
+K.clear_session()
+
+history = model.fit(train_ds, steps_per_epoch=steps_per_epoch, epochs=MAX_EPOCHS,
+                      validation_data=val_ds, validation_steps=validation_steps,
+                      callbacks=callbacks)
+
+plot_seg_history_iou(history, hist_fig)
+
+plt.close('all')
+K.clear_session()
+
+
+scores = model.evaluate(val_ds, steps=validation_steps)
+
+print('loss={loss:0.4f}, Mean IOU={iou:0.4f}'.format(loss=scores[0], iou=scores[1]))
+
+# loss=0., Mean IOU=0.
+
+
+
 
 
 
