@@ -280,29 +280,19 @@ plot_seg_history_iou(history, hist_fig)
 plt.close('all')
 K.clear_session()
 
-history = model.fit(train_ds, steps_per_epoch=steps_per_epoch, epochs=MAX_EPOCHS,
-                      validation_data=val_ds, validation_steps=validation_steps,
-                      callbacks=callbacks)
-
-plot_seg_history_iou(history, hist_fig)
-
-plt.close('all')
-K.clear_session()
 
 
 scores = model.evaluate(val_ds, steps=validation_steps)
 
 print('loss={loss:0.4f}, Mean IOU={iou:0.4f}'.format(loss=scores[0], iou=scores[1]))
 
-# loss=0., Mean IOU=0.
-
-
+# loss=0.7686, Mean IOU=0.9871
 
 
 
 
 # sample_data_path = os.getcwd()+os.sep+'data/dunes/images/files'
-# test_samples_fig = os.getcwd()+os.sep+'dunes_sample_16class_est16samples.png'
+test_samples_fig = os.getcwd()+os.sep+'results/dunes_3d_12class_estsamples.png'
 # sample_label_data_path = os.getcwd()+os.sep+'data/dunes/labels/files'
 #
 # sample_filenames = sorted(tf.io.gfile.glob(sample_data_path+os.sep+'*.jpg'))
@@ -312,7 +302,7 @@ print('loss={loss:0.4f}, Mean IOU={iou:0.4f}'.format(loss=scores[0], iou=scores[
 
 
 
-sample_data_path = os.getcwd()+os.sep+'data/image_sample'
+sample_data_path = os.getcwd()+os.sep+'data/test_sample'
 
 # test_samples_fig = os.getcwd()+os.sep+'dunes2d_sample_16class_est16samples.png'
 
@@ -320,31 +310,32 @@ sample_filenames = sorted(tf.io.gfile.glob(sample_data_path+os.sep+'*.jpg'))
 
 
 from matplotlib.colors import ListedColormap
-cmap = ListedColormap(["#000000", "#3366CC", "#DC3912", "#FF9900", "#109618", "#990099", "#0099C6", "#DD4477", "#66AA00"])
+cmap = ListedColormap(["#222A2A", "#FD3216", "#00FE35", "#6A76FC", "#FED4C4", "#FE00CE", "#0DF9FF", "#F6F926", "#FF9616", "#479B55", "#EEA6FB", "#DC587D"])
 
-plt.figure(figsize=(24,24))
+plt.figure(figsize=(32,32))
 
-for counter,f in enumerate(sample_filenames):
-    # image = seg_file2tensor(f)/255
+for counter,f in enumerate(sample_filenames[:24]):
+    image = seg_file2tensor(f)/255
 
-    dem = seg_file2tensor(f.replace('images','dems').replace('ortho','dem'))/255
+    # dem = seg_file2tensor(f.replace('images','dems').replace('ortho','dem'))/255
 
     # merged = np.dstack((image.numpy(), dem.numpy()[:,:,0]))
 
-    est_label = model.predict(tf.expand_dims(dem, 0) , batch_size=1).squeeze()
+    est_label = model.predict(tf.expand_dims(image, 0) , batch_size=1).squeeze()
 
-    est_label = tf.argmax(est_label, axis=-1)
+    est_label = tf.argmax(est_label, axis=-1).numpy()
+    est_label[image[:,:,0]==0] = 0
 
-    plt.subplot(4,4,counter+1)
+    plt.subplot(8,4,counter+1)
     name = sample_filenames[counter].split(os.sep)[-1].split('.jpg')[0]
     plt.title(name, fontsize=10)
-    plt.imshow(dem, cmap=plt.cm.gray)
+    plt.imshow(image) #dem, cmap=plt.cm.gray)
 
-    plt.imshow(est_label, alpha=0.5, cmap=cmap, vmin=0, vmax=8)
+    plt.imshow(est_label, alpha=0.5, cmap=cmap, vmin=0, vmax=11)
 
     plt.axis('off')
 
 # plt.show()
 plt.savefig(test_samples_fig,
-            dpi=200, bbox_inches='tight')
+            dpi=300, bbox_inches='tight')
 plt.close('all')

@@ -31,9 +31,9 @@
 # oyster_imports
 
 # VALIDATION_SPLIT = 0.5
-TARGET_SIZE = 768
-ims_per_shard = 200
-BATCH_SIZE = 4 #6
+TARGET_SIZE = 608
+# ims_per_shard = 200
+# BATCH_SIZE = 4 #6
 
 MAX_EPOCHS = 100
 

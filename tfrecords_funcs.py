@@ -45,6 +45,29 @@ tf.random.set_seed(SEED)
 ### TFRECORD FUNCTIONS
 ###############################################################
 
+@tf.autograph.experimental.do_not_convert
+def read_seg_tfrecord_4ddunes(example):
+    features = {
+        "image": tf.io.FixedLenFeature([], tf.string),  # tf.string = bytestring (not text string)
+        "label": tf.io.FixedLenFeature([], tf.string),   # shape [] means scalar
+    }
+    # decode the TFRecord
+    example = tf.io.parse_single_example(example, features)
+
+    image = tf.image.decode_png(example['image'], channels=4)
+    image = tf.cast(image, tf.float32)/ 255.0
+
+    label = tf.image.decode_jpeg(example['label'], channels=1)
+    label = tf.cast(label, tf.uint8)
+
+    cond = tf.greater(label, tf.ones(tf.shape(label),dtype=tf.uint8)*11) #8)
+    label = tf.where(cond, tf.ones(tf.shape(label),dtype=tf.uint8)*11, label)
+
+    label = tf.one_hot(tf.cast(label, tf.uint8),12)
+    label = tf.squeeze(label)
+
+    return image, label
+
 #-----------------------------------
 @tf.autograph.experimental.do_not_convert
 def read_seg_tfrecord_dunes(example):
